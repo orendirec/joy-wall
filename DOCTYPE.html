@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Мелкие радости</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #18caca;
+      --accent-dark: #0f7f7f;
+      --fade-duration: 0.19s;
+      --tab-fade-duration: 0.18s;
+    }
+    html, body { height: 100%; margin: 0; padding: 0; }
+    body {
+      min-height:100vh;
+      font-family:'Montserrat',system-ui,Arial,sans-serif;
+      background:#fff;
+      overflow-x:hidden;
+    }
+    .lava-bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      display: block;
+      filter: blur(7px);
+    }
+    .wrapper {
+      max-width:490px;
+      margin:0 auto;
+      padding:0 10px 34px 10px;
+      position:relative;
+      z-index:2;
+    }
+    h1 {
+      font-size:2.1em; color:var(--accent-dark);
+      margin:44px 0 13px; font-weight:900;
+      letter-spacing:.8px; text-align:center; user-select:none;
+      z-index:2;
+      position:relative;
+    }
+    .nav {
+      display:flex; gap:10px; justify-content:center;
+      margin-bottom:22px;
+    }
+    .nav-btn {
+      background:rgba(255,255,255,0.97); border:none; border-radius:13px;
+      padding:10px 24px; font-size:1em; font-weight:700; color:var(--accent-dark);
+      cursor:pointer; box-shadow:0 2px 14px #c1faf739;
+      transition:background .21s, color .13s; outline:none;
+      position:relative; z-index:1;
+    }
+    .nav-btn.active {
+      color:#fff; background:var(--accent);
+      box-shadow:0 3px 18px #18caca3b; z-index:3;
+    }
+    .sections { position:relative; min-height:280px; }
+    .page-section {
+      background:rgba(255,255,255,.85);
+      border-radius:18px;
+      box-shadow:0 2px 20px #bcfafc28; padding:30px 15px 24px 15px;
+      margin-bottom:22px;
+      position:absolute; left:0; right:0; top:0;
+      opacity:0; pointer-events:none;
+      transform:scale(.98) translateY(27px);
+      transition: 
+        opacity var(--tab-fade-duration) cubic-bezier(.55,1.09,.42,.98), 
+        transform var(--tab-fade-duration) cubic-bezier(.29,1,.42,1.01);
+      z-index:1; display:block;
+      backdrop-filter: blur(2px);
+    }
+    .page-section.shown {
+      opacity:1; pointer-events:auto;
+      transform:scale(1) translateY(0); z-index:2;
+    }
+    .page-section.hidden {
+      opacity:0; pointer-events:none;
+      transform:scale(.98) translateY(27px); z-index:1;
+    }
+    .todo-fade {
+      transition:opacity var(--fade-duration) cubic-bezier(.44,1.2,.23,1);
+      opacity:1;
+    }
+    .todo-fade.hide { opacity:0; }
+    .section-title { font-size:1.14em; font-weight:900; color:var(--accent-dark); margin-bottom:13px; letter-spacing:.02em; }
+    .todo-emoji {font-size:2.37em;margin-bottom:6px;}
+    .todo-title {color:var(--accent-dark);font-size:1.13em;font-weight:800;margin:3px 0 2px 0;}
+    .todo-desc {color:#178e8e;font-size:1em;margin:2px 0 14px 0;}
+    .todo-note-row {margin-bottom:15px;}
+    .todo-note-inp {
+      width:100%;border-radius:10px;border:1.2px solid #c1faf7;
+      padding:7px 10px;font-size:1.04em;background:#fafefe;outline:none;
+      transition:border .15s;}
+    .todo-note-inp:focus {border-color: var(--accent);}
+    .todo-save-btn {
+      background:var(--accent);border:none;border-radius:10px;padding:8px 17px;
+      font-weight:700;color:#fff;font-size:1em;margin-top:8px;cursor:pointer;transition:background .13s;}
+    .todo-save-btn:active {background:var(--accent-dark);}
+    .day-progress-bar {
+      height:10px;border-radius:8px;
+      background:linear-gradient(90deg,#e9fcfb,#e2f7f5 60%,#eafefa 100%);
+      margin:6px 0 13px 0;width:100%;overflow:hidden;}
+    .day-progress-inner {
+      height:100%;border-radius:8px;background:var(--accent);
+      transition:width .27s cubic-bezier(.46,1.31,.42,1), background .2s;
+    }
+    .week-list {
+      display:flex;gap:6px;justify-content:space-between;font-size:1.12em;margin-bottom:0;
+      flex-wrap:wrap;margin-top:8px;transition:gap .2s;
+    }
+    .week-task {
+      border:none;background: none;padding:0;margin:0;cursor:pointer;
+      border-radius:50%;font-size:1.54em;width:2.2em;height:2.2em;
+      display:flex;align-items:center;justify-content:center;
+      transition:background-color .15s, color .15s, box-shadow .14s,transform .13s;
+      color: var(--accent-dark);box-shadow: 0 2px 6px #bafbf43f;position: relative;outline: none;
+    }
+    .week-task.done {
+      background:var(--accent);color:#fff;font-weight:700;transform: scale(1.07);
+      box-shadow: 0 3px 10px #8bf7f286;
+    }
+    .week-task.week-task-today {
+      border:2.4px solid var(--accent-dark);background: #e6fefc;color:var(--accent-dark);
+      font-weight:900;z-index:3;box-shadow:0 4px 12px #bafbf49a;transform: scale(1.13) rotate(-4deg);
+    }
+    .input-row {display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;}
+    .joy-inp {
+      flex:1;border-radius:13px;border:1.2px solid #c1faf7;padding:10px 13px;
+      font-size:1.05em;font-family:inherit;box-sizing:border-box;background:#f7fefc;outline:none;transition: border .13s;
+    }
+    .joy-inp:focus {border-color:var(--accent);}
+    .add-btn {
+      background:var(--accent);border:none;border-radius:12px;padding:10px 22px;
+      font-weight:700;color:#fff;font-size:1em;cursor:pointer;transition:background .11s;box-shadow:0 1px 7px #c7fcf143;
+    }
+    .add-btn:active {background: var(--accent-dark);}
+    .char-counter {font-size:.95em;color:#b2babd;margin-left:6px;align-self:center;transition:color .12s;}
+    .joy-list {display:flex;flex-direction:column;gap:13px;margin:0;padding:0;}
+    .joy-card {
+      background:linear-gradient(90deg,#e0fdfc 92%,#ffffff 100%);
+      box-shadow:0 1.5px 9px #d2f9f433;
+      border-radius:13px;padding:15px 13px 11px 13px;
+      display:flex;gap:14px;align-items:flex-start;position:relative;transition:background .19s, box-shadow .12s;
+    }
+    .joy-text {
+      flex:1;color:var(--accent-dark);font-size:1.03em;font-weight:600;
+      word-break:break-word;line-height:1.21;
+    }
+    .joy-actions {display:flex;gap:9px;margin-left:4px;}
+    .like-btn, .del-btn {
+      border:none;background:none;cursor:pointer;font-size:1.10em;padding:2px 7px;transition:.10s;
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", "Android Emoji", "EmojiOne Mozilla", sans-serif;
+    }
+    .like-btn {color:#15b1a9;display:flex;align-items:center;gap:2px;font-size: 1.33em;transition: color .1s;}
+    .like-btn.liked { color: #ffd950;}
+    .likes-count {font-size:.97em;font-weight:700;margin-left:2px;color:var(--accent-dark);transition:color .13s;}
+    .del-btn {color:#a8ccc8;font-size:1.1em;transition: color .1s;}
+    .del-btn:hover {color:#18caca;}
+    .empty-note {color:#b2b9c1;text-align:center;font-size:1.03em;margin:13px auto 7px;}
+    .motiv-content {display:flex;flex-direction:column;align-items:center;gap:18px;}
+    .motiv-btn {
+      background:var(--accent);color:#fff;border:none;padding:13px 32px 13px 32px;
+      font-size:1.15em;font-weight:900;border-radius:16px;margin-top:0px;cursor:pointer;box-shadow:0 4px 17px #d6fff729;transition:background .10s, color .11s;
+    }
+    .motiv-btn:active {background:var(--accent-dark);}
+    .motiv-text {
+      font-size:1.15em;color:var(--accent-dark);text-align:center;font-weight:700;min-height:42px;letter-spacing:.015em;line-height:1.26;user-select:text;
+    }
+    @media (max-width:700px) {
+      .wrapper{max-width:99vw;}
+      .joy-inp,.todo-note-inp{max-width:99vw;}
+      .motiv-btn{font-size:1.06em;}
+      .page-section{padding:13px 3vw 14px;}
+      .week-list{gap:2vw;}
+      .section-title{font-size:1em;}
+    }
+  </style>
+</head>
+<body>
+  <canvas id="lava" class="lava-bg-canvas"></canvas>
+  <div class="wrapper">
+    <h1>Мелкие радости</h1>
+    <div class="nav">
+      <button id="tabDay" class="nav-btn active">Задание дня</button>
+      <button id="tabWall" class="nav-btn">Стена радостей</button>
+      <button id="tabMotiv" class="nav-btn">Мотивация</button>
+    </div>
+    <div class="sections">
+      <div id="todoSection" class="page-section shown"></div>
+      <div id="joySection" class="page-section"></div>
+      <div id="motivSection" class="page-section"></div>
+    </div>
+  </div>
+<script>
+// --- Лава-лампа с сильным размытием ---
+(function lavaLamp(){
+  const COLORS = [
+    "rgba(30,230,225,0.55)",
+    "rgba(32,203,202,0.48)",
+    "rgba(30,200,180,0.56)",
+    "rgba(24,170,170,0.44)",
+    "rgba(18,202,202,0.49)"
+  ];
+  const BUBBLES = 7;
+  const MIN_RADIUS = 70, MAX_RADIUS = 170;
+  let cvs = document.getElementById("lava"), ctx = cvs.getContext("2d");
+  let W=window.innerWidth,H=window.innerHeight;
+  let bubbles = [];
+  function setSize(){
+    W = window.innerWidth; H = window.innerHeight;
+    cvs.width = W; cvs.height = H;
+  }
+  setSize();
+  window.addEventListener('resize',setSize);
+  for(let i=0;i<BUBBLES;i++){
+    let r = MIN_RADIUS + Math.random()*(MAX_RADIUS-MIN_RADIUS);
+    bubbles.push({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      r: r,
+      dx: (Math.random()-0.5)*0.35,
+      dy: (Math.random()-0.5)*0.27,
+      color: COLORS[Math.floor(Math.random()*COLORS.length)]
+    });
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(let b of bubbles){
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.r,0,2*Math.PI);
+      ctx.closePath();
+      ctx.fillStyle = b.color;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 95;
+      ctx.globalAlpha = 1;
+      ctx.fill();
+      ctx.shadowBlur=0;
+    }
+  }
+  function move(){
+    for(let b of bubbles){
+      b.x += b.dx; b.y += b.dy;
+      if(b.x < -b.r) b.x = W + b.r;
+      if(b.x > W + b.r) b.x = -b.r;
+      if(b.y < -b.r) b.y = H + b.r;
+      if(b.y > H + b.r) b.y = -b.r;
+    }
+  }
+  function anim(){
+    move();
+    draw();
+    requestAnimationFrame(anim);
+  }
+  anim();
+})();
+
+/* ========== Навигация и fade-вкладки ========== */
+const sections = [
+  document.getElementById('todoSection'),
+  document.getElementById('joySection'),
+  document.getElementById('motivSection')
+];
+const tabBtns = [
+  document.getElementById('tabDay'),
+  document.getElementById('tabWall'),
+  document.getElementById('tabMotiv')
+];
+let currentTab = 0;
+
+// --- БЕЗ setTimeout и с тотальным скрытием/показом секций ---
+function switchTab(idx) {
+  tabBtns.forEach((btn, i) => btn.classList.toggle('active', i === idx));
+  sections.forEach((sec, i) => {
+    if (i === idx) {
+      sec.classList.add('shown');
+      sec.classList.remove('hidden');
+    } else {
+      sec.classList.remove('shown');
+      sec.classList.add('hidden');
+    }
+  });
+  currentTab = idx;
+}
+
+/* ========== Personal week start ========== */
+function getOrSetPersonalStart(){
+  let start = localStorage.getItem('odnapodpiska_week_start');
+  if(!start){
+    start = String(Date.now());
+    localStorage.setItem('odnapodpiska_week_start', start);
+  }
+  return parseInt(start,10);
+}
+function getPersonalWeekDay(){
+  let msInDay = 24*60*60*1000;
+  let start = getOrSetPersonalStart();
+  let now = Date.now();
+  let daysPassed = Math.floor((now - start)/msInDay);
+  return daysPassed%7;
+}
+
+/* ========== Задания дня ========== */
+const weekTasks = [
+  {emoji:"🧊",title:"Вода с лимоном",desc:"Начни утро со стакана воды с лимоном."},
+  {emoji:"💌",title:"Пожелай удачи",desc:"Пожелай удачи друзьям или близким."},
+  {emoji:"🌱",title:"Прогулка",desc:"На 10 минут выйди на воздух — просто подышать!"},
+  {emoji:"🍦",title:"Приятное лакомство",desc:"Побалуй себя чем-то вкусным."},
+  {emoji:"📴",title:"Digital detox",desc:"Отключи телефон на 1 час — просто так."},
+  {emoji:"🚴",title:"Движение",desc:"Потянись или сделай лёгкую зарядку."},
+  {emoji:"🌼",title:"Запись приятностей",desc:"Запиши три классные мелочи недели."}
+];
+function todoProgressLoad(){
+  return JSON.parse(localStorage.getItem('todo_progress')||'[]').concat([0,0,0,0,0,0,0]).slice(0,7);
+}
+function todoProgressSave(arr){
+  localStorage.setItem('todo_progress',JSON.stringify(arr));
+}
+let selectedTaskIdx = getPersonalWeekDay();
+function fadeTaskOutAndIn(nextIdx){
+  const cont = sections[0].querySelector('.todo-fade');
+  if(!cont) { renderTodo(nextIdx,true); return; }
+  cont.classList.add('hide');
+  setTimeout(()=>{ renderTodo(nextIdx,true); }, 190);
+}
+function renderTodo(idx = null, forceNoFade=false) {
+  if(idx === null) {
+    selectedTaskIdx = getPersonalWeekDay();
+  }
+  if(idx !== null && idx !== selectedTaskIdx && !forceNoFade) {
+    fadeTaskOutAndIn(idx);
+    return;
+  }
+  selectedTaskIdx = (typeof idx === "number" ? idx : selectedTaskIdx);
+  const i = selectedTaskIdx;
+  const task = weekTasks[i];
+  let progress = todoProgressLoad();
+  let percent = Math.round(progress.filter(Boolean).length/7*100);
+  let note = localStorage.getItem('todo_note_'+i)||'';
+  const container = document.createElement('div');
+  container.className = "todo-fade hide";
+  container.innerHTML = `
+    <div class="section-title">Задание недели</div>
+    <div class="todo-emoji">${task.emoji}</div>
+    <div class="todo-title">${task.title}</div>
+    <div class="todo-desc">${task.desc}</div>
+    <div class="todo-note-row">
+      <textarea rows="2" class="todo-note-inp" id="todoNote" maxlength="100" placeholder="Как у тебя сегодня?">${note}</textarea>
+      <br>
+      <button class="todo-save-btn" id="todoSave" type="button">Сохранить</button>
+    </div>
+    <div class="day-progress-bar"><div class="day-progress-inner" style="width:${percent}%;"></div></div>
+    <div class="week-list">
+      ${weekTasks.map((w,ii)=>`
+        <button type="button" class="week-task${progress[ii]?' done':''}${ii===i?' week-task-today':''}" data-idx="${ii}" title="${w.title}">${w.emoji}</button>
+      `).join('')}
+    </div>
+  `;
+  const parent = sections[0];
+  parent.innerHTML = '';
+  parent.appendChild(container);
+  setTimeout(() => container.classList.remove('hide'), 25);
+
+  document.getElementById('todoNote').oninput=function(){
+    if(this.value.length>100) this.value=this.value.slice(0,100);
+  };
+  document.getElementById('todoSave').onclick=function(){
+    let txt = document.getElementById('todoNote').value.trim();
+    localStorage.setItem('todo_note_'+i,txt);
+    progress[i] = !!txt.length;
+    todoProgressSave(progress);
+    renderTodo(i,true);
+  };
+  container.querySelectorAll('.week-task').forEach(btn=>{
+    btn.onclick = function(){
+      const indx=Number(this.dataset.idx);
+      if (indx!==selectedTaskIdx) renderTodo(indx);
+    };
+  });
+}
+renderTodo();
+
+/* ========== Стена радостей ========== */
+function escapeHtml(str){
+  return str.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function loadJoys(){return JSON.parse(localStorage.getItem('joywall3')||'[]');}
+function saveJoys(arr){localStorage.setItem('joywall3',JSON.stringify(arr));}
+function renderJoys(){
+  const list = document.getElementById('joyList');
+  const joys = loadJoys();
+  if(!joys.length){
+    list.innerHTML = '<div class="empty-note">Пока нет радостей — впиши что-то хорошее!</div>';
+    updateCounter();
+    return;
+  }
+  list.innerHTML = joys.map(j=>`
+    <div class="joy-card" data-id="${j.id}">
+      <div class="joy-text">${escapeHtml(j.text)}</div>
+      <div class="joy-actions">
+        <button class="like-btn${j.liked?' liked':''}" title="Сердечко">${j.liked? "⭐":"☆"} <span class="likes-count">${j.likes||0}</span></button>
+        <button class="del-btn" title="Удалить">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+  updateCounter();
+}
+sections[1].innerHTML = `
+  <div class="section-title">Стена радостей</div>
+  <form class="input-row" id="joyForm" autocomplete="off">
+    <input id="joyInp" class="joy-inp" maxlength="30" placeholder="Напиши свою радость..." />
+    <button class="add-btn" id="addBtn" type="submit">+</button>
+    <span class="char-counter" id="charCounter">0/30</span>
+  </form>
+  <div class="joy-list" id="joyList"></div>
+`;
+function updateCounter(){
+  const val=document.getElementById('joyInp').value;
+  document.getElementById('charCounter').innerText=val.length+"/30";
+  document.getElementById('charCounter').style.color=val.length>=30?"#fb7171":"#b2babd";
+}
+document.getElementById('joyInp').oninput=function(){
+  if(this.value.length>30) this.value=this.value.slice(0,30);
+  updateCounter();
+};
+document.getElementById('joyForm').onsubmit=function(e){
+  e.preventDefault();
+  const v=document.getElementById('joyInp').value.trim();
+  if(!v || v.length>30) return;
+  let joys=loadJoys();
+  joys.unshift({id:Date.now(),text:v,likes:0,liked:false});
+  joys=joys.slice(0,80);
+  saveJoys(joys);
+  document.getElementById('joyInp').value='';
+  updateCounter();
+  renderJoys();
+};
+document.getElementById('joyList').onclick=function(e){
+  let card = e.target.closest('.joy-card');
+  if(!card) return;
+  let id = +card.dataset.id;
+  let joys = loadJoys();
+  let idx = joys.findIndex(j=>j.id===id);
+  if(idx<0)return;
+  if(e.target.classList.contains('like-btn') || (e.target.closest && e.target.closest('.like-btn'))){
+    joys[idx].likes = (joys[idx].likes||0) + (joys[idx].liked?-1:1);
+    joys[idx].liked = !joys[idx].liked;
+    saveJoys(joys); renderJoys();
+  }
+  if(e.target.classList.contains('del-btn')){
+    joys.splice(idx,1);
+    saveJoys(joys); renderJoys();
+  }
+};
+updateCounter();
+renderJoys();
+
+/* ========== Мотивация ========== */
+const motivs = [
+  "Ты не хуже других, ты — уникален(а) 🌿",
+  "Твоя маленькая радость — это большой шаг.",
+  "Мечтай — и не слушай колебаний вокруг.",
+  "Ты способен(на) поменять настроение дня!",
+  "Радость — это просто: чашка чая, разговор, улыбка.",
+  "Пусть сегодня будет уютно и светло.",
+  "Если надо — будь смелее, у тебя получится.",
+  "Верь, что ты движешься вперёд — даже если шаг крошечный.",
+  "В моменты усталости просто дыши — ты справляешься.",
+  "Нет ничего ценнее спокойных минут внутри себя.",
+  "Ты приносишь радость другим, даже не зная этого.",
+  "Твоя улыбка кому-то нужна.",
+  "Каждый день — это шанс. Даже если он кажется серым.",
+  "За новые мечты! Не теряй воображение.",
+  "Будь добр(а) к себе: это тоже навык.",
+  "Делай сегодня немного больше для себя.",
+  "Маленький успех — уже повод для гордости.",
+  "Обнимай(те) жизнь, даже если она иногда колючая.",
+  "Отдых — не слабость, а инвестиция в себя.",
+  "Будь честен(на) с собой: это уже, правда, подвиг."
+];
+sections[2].innerHTML=`
+  <div class="motiv-content">
+    <button class="motiv-btn" id="motivateBtn">ХОЧУ МОТИВАЦИЮ</button>
+    <div class="motiv-text" id="motivText">Нажми на кнопку, чтобы получить мотивацию дня ✨</div>
+  </div>
+`;
+document.getElementById('motivateBtn').onclick=function(){
+  let m = motivs[Math.floor(Math.random()*motivs.length)];
+  document.getElementById('motivText').textContent = m;
+};
+
+/* ========== Унифицированные события вкладок ========== */
+tabBtns.forEach((btn,idx)=>{
+  btn.onclick=()=>{
+    switchTab(idx);
+    if(idx===0) renderTodo(null);
+    if(idx===1) renderJoys();
+    // вкладка мотивации не требует отдельного render
+  }
+});
+</script>
+</body>
+</html>
+
